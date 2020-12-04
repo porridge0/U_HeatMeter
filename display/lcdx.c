@@ -47,14 +47,14 @@ volatile uint8_t* LCD_REGS[13] = { &LCDM3, &LCDM4, &LCDM5, &LCDM6, &LCDM7,
  */
 
 /*!
- * @brief Function Name: LCD_Setup
+ * @brief Function Name: lcd_config
  *
  * The function initialized registers and I/O pins associated with LCD operation
  *
  * @param none
  * @return none
  */
-void LCD_Setup() {
+void lcd_config() {
 
 	/* Enable COMx Pin */
 

@@ -1,1 +1,1 @@
-"./main.obj" "./signal/tdc.obj" "./display/lcdx.obj" "./config/spi.obj" "./comm/app.obj" "./comm/phy.obj" "../lnk_msp430fr6820.cmd" -l"libmath.a" -l"libc.a" 
+"./main.obj" "./util/clock.obj" "./signal/tdc.obj" "./display/lcdx.obj" "./config/spi.obj" "./comm/app.obj" "./comm/phy.obj" "../lnk_msp430fr6820.cmd" -l"libmath.a" -l"libc.a" 

@@ -21,10 +21,7 @@
 
 #include <stdint.h>
 #include <stdio.h>
-
-typedef enum {
-	TRUE, FALSE
-} boolean;
+#include "../config/system.h"
 
 #ifdef _lk_
 typedef uint32_t reg_t;
@@ -537,27 +534,58 @@ typedef struct {
 
 } ALUInstruction;
 
-void init(int slaveSelectPin);
-
-void end();
+/* Opcodes */
+typedef enum {
+	OPCODE_WRITE_ADDRESS = 0x80, //3 LSB are the address to write
+	OPCODE_WRITE_RES_1 = 0x81,
+	OPCODE_READ_ADDRESS = 0xB0, //3 LSB are the address to read
+	OPCODE_READ_RES_1 = 0xB1,
+	OPCODE_READ_RES_2 = 0xB2,
+	OPCODE_READ_RES_3 = 0xB3,
+	OPCODE_READ_STATUS = 0xB4,
+	OPCODE_READ_REG_1_TEST = 0xB5, //Content of highest 8 bits of write register 1, to be used for testing the communication
+	OPCODE_READ_ID = 0xB7,
+	OPCODE_READ_PW1ST = 0xB8,
+	OPCODE_EEPROM_SAVE = 0xC0, //Write configuration registers into EEPROM
+	OPCODE_EEPROM_RESTORE = 0xF0, //Transfer EEPROM content into configuration registers
+	OPCODE_EEPROM_COMPARE = 0xC6, //Compare configuration registers with EEPROM
+	OPCODE_INIT = 0x70,
+	OPCODE_POWER_ON_RESET = 0x50,
+	OPCODE_START_TOF = 0x01,
+	OPCODE_START_TEMP = 0x02,
+	OPCODE_START_CAL_RESONATOR = 0x03,
+	OPCODE_START_CAL_TDC = 0x04,
+	OPCODE_START_TOF_RESTART = 0x05,
+	OPCODE_START_TEMP_RESTART = 0x06
+} eOpcode;
 
 // Start communicating. Transfers the config over as well so call this
 
 // after configuring the settings as required.
 
-void begin();
+void start_tdc();
+
+void end();
 
 // Initialise the GP22, then it waits for an event to measure.
 
-void measure();
+void init();
 
+//caliberate resonator
+void startCalRes();
+
+//start temp measurement
+void startTemp();
+
+//start tof measurement
+void startTOF();
 /// Status related functions
 
 // Read the GP22s status register into memory.
 
 // This must be called first to update the status from the TDC.
 
-void readStatus();
+uint16_t readStatus();
 
 // Was there a timeout?
 
@@ -649,7 +677,7 @@ uint8_t getHit2Op();
 
 // Fast update the ALU hit operators for doing multiple ALU calculations.
 
-void updateALUInstruction(ALUInstruction instruction);
+void updateALUInstruction(ALUInstruction *instruction);
 
 /// Set the channel edge sensitivities
 
@@ -705,32 +733,28 @@ void getConfig(uint32_t * arrayToFill);
 
 // The fast SPI transfer functions
 
-uint8_t transfer1B(uint8_t opcode, uint8_t byte1);
+uint8_t transfer1B(eOpcode opcode, uint8_t byte1);
 
-uint16_t transfer2B(uint8_t opcode, uint8_t byte1, uint8_t byte2);
+uint16_t transfer2B(eOpcode opcode, uint8_t byte1, uint8_t byte2);
 
-uint32_t transfer4B(uint8_t opcode, uint8_t byte1, uint8_t byte2, uint8_t byte3,
+uint32_t transfer4B(eOpcode opcode, uint8_t byte1, uint8_t byte2, uint8_t byte3,
 		uint8_t byte4);
-
 // The slave select pin used by SPI to communicate with the GP22
-
 int _ssPin;
 
-uint16_t _status;
-
 // Have the conversion from the raw result to time precalculated.
-
 void updateConversionFactors();
+
+uint8_t read_error_status();
 
 float _conversionFactorRead;
 
 float _conversionFactorDelay;
 
+#define CONFIG_2 //Select default configuration
 // Set the config to single pulse measurement mode 2 as default for now
-
-uint8_t _config[7][4] = {
-
-{ 0xF3, 0x07, 0x68, 0x00 }, // Reg 0
+#ifdef CONFIG_1
+uint8_t _config[7][4] = { { 0xF3, 0x07, 0x68, 0x00 }, // Reg 0
 
 		{ 0x21, 0x42, 0x00, 0x00 }, // Reg 1
 
@@ -743,8 +767,42 @@ uint8_t _config[7][4] = {
 		{ 0x40, 0x00, 0x00, 0x00 }, // Reg 5
 
 		{ 0x40, 0x20, 0x60, 0x00 }  // reg 6
+}
+#endif
+#ifdef CONFIG_2
+uint8_t _config[7][4] = {
+	{	0x43, 0x0B, 0xE8, 0x00}, // Reg 0
 
+	{	0x21, 0x44, 0x40, 0x00}, // Reg 1
+
+	{	0xA0, 0x13, 0x88, 0x00}, // Reg 2
+
+	{	0xD0, 0xA2, 0x48, 0x00}, // Reg 3
+
+	{	0x10, 0x00, 0x40, 0x00}, // Reg 4
+
+	{	0x40, 0x00, 0x00, 0x00}, // Reg 5
+
+	{	0xC0, 0xC0, 0x61, 0x00}  // reg 6
 };
-//uint8_t _readRegs[7] = {0x81};
+#endif
+#ifdef CONFIG_3
+uint8_t _config[7][4] = {
+	{	0x22, 0x06, 0x68, 0x00}, // Reg 0
 
-#endif /* SIGNAL_TDC_H_ */
+	{	0x55, 0x40, 0x80, 0x00}, // Reg 1
+
+	{	0x20, 0x00, 0x00, 0x00}, // Reg 2
+
+	{	0x18, 0x00, 0x00, 0x00}, // Reg 3
+
+	{	0x20, 0x00, 0x00, 0x00}, // Reg 4
+
+	{	0x00, 0x00, 0x00, 0x00}, // Reg 5
+
+	{	0x00, 0x00, 0x00, 0x00}  // reg 6
+};
+#endif
+
+#endif
+#endif	/* SIGNAL_TDC_H_ */

@@ -23,7 +23,7 @@
 #include <msp430.h>
 #include <stdlib.h>
 #include "stdio.h"
-
+#include <math.h>
 /* Private variables ---------------------------------------------------------*/
 #define LOOP_DLY_100US    2000
 #define LOOP_DLY_250ns    2
@@ -176,11 +176,11 @@ void main(void) {
 
 			// Wait for INT Slot_x
 			if (Bus_Type == SPI1)
-				while (GPIO_ReadInputDataBit(GPIOD, GPIO_Pin_4) == 1)
-					;
+				while (GPIO_ReadInputDataBit(GPIOD, GPIO_Pin_4) == 1);
+
 			if (Bus_Type == SPI2)
-				while (GPIO_ReadInputDataBit(GPIOE, GPIO_Pin_11) == 1)
-					;
+				while (GPIO_ReadInputDataBit(GPIOE, GPIO_Pin_11) == 1);
+
 
 			//Calculate Correction factor
 			//The time interval to be measured is set by ANZ_PER_CALRES
@@ -204,11 +204,10 @@ void main(void) {
 
 			// Wait for INT Slot_x
 			if (Bus_Type == SPI1)
-				while (GPIO_ReadInputDataBit(GPIOD, GPIO_Pin_4) == 1)
-					;
+				while (GPIO_ReadInputDataBit(GPIOD, GPIO_Pin_4) == 1);
+
 			if (Bus_Type == SPI2)
-				while (GPIO_ReadInputDataBit(GPIOE, GPIO_Pin_11) == 1)
-					;
+				while (GPIO_ReadInputDataBit(GPIOE, GPIO_Pin_11) == 1);
 
 			// Read the Status Register
 			printf("\nStatus Register = 0x%04X",

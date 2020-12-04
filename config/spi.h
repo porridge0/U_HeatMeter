@@ -16,24 +16,23 @@
 #include <msp430.h>
 #include <assert.h>
 #include "../config/pin_io.h"
-
+#include "../config/system.h"
 
 /*! SPI_TDC_EN: Macro to pull SPI Chip select pin LOW, Clear previous interrupts and enable interrupts....*/
 #define SPI_TDC_EN   { \
 							(CNFG_TDC_SPI_UCxIFG &= ~(UCTXIFG + UCRXIFG)); \
 							(CNFG_TDC_SPI_UCxIE  |=  (UCTXIE + UCRXIE));  \
-							(CNFG_TDC_EN_OUT    &= ~CNFG_TDC_SLVSELCT_BIT); \
+							(CNFG_PORT_1_OUT    &= ~CNFG_TDC_SLVSELCT_BIT); \
 						 }
 /*! SPI_TDC_DIS: Macro to pull SPI Chip select pin Hi, Clear previous interrupts and disable interrupts....*/
 #define SPI_TDC_DIS  { \
 						    (CNFG_TDC_SPI_UCxIFG &= ~(UCTXIFG + UCRXIFG)); \
 							(CNFG_TDC_SPI_UCxIE  &= ~(UCTXIE + UCRXIE));  \
-							(CNFG_TDC_EN_OUT    |= CNFG_TDC_SLVSELCT_BIT); \
+							(CNFG_PORT_1_OUT    |= CNFG_TDC_SLVSELCT_BIT); \
 						}
-
+const extern boolean SPI_CONTINUE = TRUE;
 /* Configure SPI registers for operation */
 void spi_config();
-void tx_data(void *data);
-void rx_data(uint8_t byte);
-
+uint8_t spi_transfer(uint8_t byte, boolean end);
+uint8_t spi_transfer_end(uint8_t byte);
 #endif /* CONFIG_SPI_H_ */

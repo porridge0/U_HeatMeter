@@ -214,10 +214,11 @@ extern volatile uint8_t tx_buff[];
 extern volatile snd_req_status c_status;
 extern volatile lnk_frame *r_frame;
 
-void ux_config(uint16_t baudRate);
+void ux_config();
 void inline rx_lnk_frame(uint8_t data);
 void tx_lnk_frame(uint8_t length);
 void x_lnk_res(void);
+void set_baudRate(uint16_t baudRate);
 void inline x_reset();
 cs_result inline t_validator();
 void inline res_delay();

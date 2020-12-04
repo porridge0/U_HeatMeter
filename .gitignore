@@ -1,6 +1,5 @@
-\Debug
-\Release 
+Debug
+ Release/*
 .xdchelp
-\.config 
-\.launches
- 
+config/*
+.launches/*

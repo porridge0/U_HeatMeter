@@ -17,6 +17,7 @@
 #include "app.h"
 #include <stdio.h>
 #include "../config/pin_io.h"
+#include "../config/system.h"
 
 void (*cb_t)(void);
 /*!-- GLOBALS */
@@ -45,7 +46,7 @@ const uint8_t UNCONFIGURED_PRIMARY_ADDRESS = 0;
  *
  * @return none
  */
-void ux_config(uint16_t baudRate) {
+void ux_config() {
 
 	/* Initialize GPIO port */
 	MBUS_TX_PxSEL0 &= ~MBUS_TX_BIT; /* Reset bit first....  */
@@ -68,7 +69,27 @@ void ux_config(uint16_t baudRate) {
 	MBUS_UART_UCxCTL0 |= UCMODE_0; /* UART Mode default */
 	MBUS_UART_UCxCTL0 &= ~UCSYNC; /* Asynchronous mode default */
 
+	/*Set a default buadrate of 300*/
+	MBUS_UART_UCxCTL1 |= UCSSEL__ACLK; /* ACLK is the clock source */
+	MBUS_UART_UCxBRW = 0x6D;
+	MBUS_UART_UCxMCTLW = 0x44;
 	//UCA0STATW |= UCLISTEN;
+
+	MBUS_UART_UCxCTL1 &= ~UCSWRST; /* enable module to apply configuration */
+	MBUS_UART_UCxIE |= UCRXIE; /* Enable RX interrupt */
+	MBUS_UART_UCxIFG &= ~(UCTXIFG + UCRXIFG); /* Clear interrupts if set */
+}
+
+/*!
+ * @brief Function Name: set_baudRate
+ *
+ * Sets the new selected working baudrate for the bus.
+ *
+ * @param : the new baudrate to set
+ *
+ * @return none
+ */
+void set_baudRate(uint16_t baudRate) {
 
 	/* Set baudrate */
 	switch (baudRate) {
@@ -114,10 +135,6 @@ void ux_config(uint16_t baudRate) {
 		MBUS_UART_UCxMCTLW = 0x4910;
 		break;
 	}
-
-	MBUS_UART_UCxCTL1 &= ~UCSWRST; /* enable module to apply configuration */
-	MBUS_UART_UCxIE |= UCRXIE; /* Enable RX interrupt */
-	MBUS_UART_UCxIFG &= ~(UCTXIFG + UCRXIFG); /* Clear interrupts if set */
 	current_baud = baudRate; /* Set baud */
 }
 /*!
@@ -130,12 +147,14 @@ void ux_config(uint16_t baudRate) {
  * @return none
  */
 void inline x_reset() {
+	__ATOMIZE();
 	//! Reset any previously cached datagram monitors
 	rx_index = 0;
 	r_frame->l_fieldL = 0;
 	r_frame->l_fieldH = 0;
 	r_frame->checksum = 0;
 	c_status = waiting_for_master;
+	__END_ATOMIC();
 }
 /*!
  * @brief Function Name: rx_lnk_frame

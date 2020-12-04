@@ -54,27 +54,18 @@ typedef enum _symbol {
 	column2
 } LCD_symbol;
 
-void LCD_Setup();
+void lcd_config();
 
 uint64_t bin_2_bcd(int32_t bin);
 
-void LCD_WriteDigit(uint8_t digit, uint8_t value);
+void write_digit(uint8_t digit, uint8_t num);
 void write_num(uint32_t digitPlace, uint64_t bcdValue, uint8_t decimalPts,
 		uint8_t sign);
 void write_minus(uint8_t pos);
 void clear_digits();
-
-void LCD_SetBatLevel(uint8_t level);
-void LCD_SetRFSigLevel(uint8_t level);
-void LCD_SetFlowDir(flowDir dir);
-void LCD_SetUnit(unit u);
+void write_symbol(LCD_symbol sym, uint8_t state);
+void write_unit(unit unit, uint8_t state);
 void write_dc_pt(uint8_t point);
-
-void LCD_SpinnerStep(int8_t spinnerState);
-
-void LCD_TurnOnSym(LCD_symbol sym);
-void LCD_TurnOffSym(LCD_symbol sym);
-
 void all_on();
 void all_off();
 

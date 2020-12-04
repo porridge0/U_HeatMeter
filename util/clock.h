@@ -22,14 +22,17 @@ typedef struct {
 	uint8_t month;
 	uint16_t year;
 } timeStruct;
+/*monitor flags*/
+extern volatile uint8_t _monChanged;
+extern volatile uint8_t _yrChanged;
 
-extern volatile timeStruct rtcCurrentTime;
-extern timeStruct RTC_ResetTime;
+extern volatile timeStruct currentTime;
+extern const timeStruct resetTime;
 
-void RTC_Setup(void);
-void RTC_TimeStamp2Ascii(volatile timeStruct* time, uint8_t* buff);
-uint8_t RTC_Ascii2TimeStamp(uint8_t* buff, timeStruct* time);
-int8_t RTC_SetClock(timeStruct* pNewTime);
-uint8_t binary_to_BCD(uint64_t copy, uint8_t* res);
+extern volatile uint8_t _sampling_timeUp;
+
+void rtc_config(void);
+int8_t rtc_set_time(timeStruct* pNewTime);
+uint8_t rtc_binary_to_bcd(uint64_t copy, uint8_t* res);
 
 #endif /* CLOCK_H_ */
