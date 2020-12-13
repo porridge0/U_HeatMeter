@@ -374,32 +374,7 @@ void main(void) {
 			printf("\n\tSum        RES_3(Up+Down)= %6.3f ns\n",
 					Time_of_flight_sum);
 
-			// to add up
-			TOF_diff_sum += Time_of_flight_diff;
-			TOF_diff_square_sum = TOF_diff_square_sum
-					+ (Time_of_flight_diff * Time_of_flight_diff);
-			TOF_sum_sum += Time_of_flight_sum;
-			sum_counter++;
 
-			if (sum_counter > no_of_avg) // Output after no_of_avg measurements
-					{
-				TOF_diff_avg = TOF_diff_sum / no_of_avg;
-				printf("\n  Avg. value of difference = %6.3f ns", TOF_diff_avg);
-				Std_Dev_of_Diff =
-						sqrt(
-								(TOF_diff_square_sum
-										- (TOF_diff_square_sum / no_of_avg))
-										/ (no_of_avg - 1));
-				printf("\n  Std.Dev. of Diff. = %6.1f ps",
-						Std_Dev_of_Diff * 1000);
-				printf("\n  PW1ST = %1.2f\n", PW1ST / (no_of_avg));
-
-				Std_Dev_of_Diff = 0;
-				TOF_diff_sum = 0;
-				TOF_diff_square_sum = 0;
-				sum_counter = 1;
-				PW1ST = 0;
-			}
 		}
 
 		Dummy_var++; // To Control the loop

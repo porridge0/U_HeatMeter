@@ -322,7 +322,7 @@ void write_num(uint32_t digitPlace, uint64_t bcdValue, uint8_t decimalPts,
  *
  * @param sym: Parameter specifiying symbol to be displayed. Possible values are:
  *              \li logo: Manufacturer logo - Istron
- *              \li signal_bar: signal strength
+ *              \li page: current page
  *              \li summation/accumulated: total accumulated value in register
  *              \li alarm_clk: alarm event
  *              \li calendar: calendar time
@@ -349,9 +349,21 @@ void write_symbol(LCD_symbol sym, uint8_t state) {
 		}
 		LCDM10 &= ~BIT3;
 		break;
-	case signal_bar:
+	case page_1:
 		/*!--todo: include digit*/
-		//state == ON ? LCDM10 |= BIT3 : LCDM10 &= ~BIT3;
+		state == ON ? LCDM10 |= BIT2 : LCDM10 &= ~BIT2;
+		break;
+	case page_2:
+		/*!--todo: include digit*/
+		state == ON ? LCDM10 |= BIT1 : LCDM10 &= ~BIT1;
+		break;
+	case page_3:
+		/*!--todo: include digit*/
+		state == ON ? LCDM10 |= BIT0 : LCDM10 &= ~BIT0;
+		break;
+	case page_4:
+		/*!--todo: include digit*/
+		state == ON ? LCDM9 |= BIT4 : LCDM9 &= ~BIT4;
 		break;
 	case summation:
 		if (state == ON) {

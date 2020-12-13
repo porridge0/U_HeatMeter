@@ -31,7 +31,10 @@ typedef enum _flowDir {
 #define OFF  (uint8_t)!ON
 typedef enum _symbol {
 	logo,
-	signal_bar,
+	page_1,
+	page_2,
+	page_3,
+	page_4,
 	summation,
 	alarm_clk,
 	calendar,

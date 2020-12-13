@@ -11,6 +11,7 @@
 #define SIGNAL_CONSTANTS_H_
 
 #include <math.h>
+#include <stdint.h>
 // Liquid water properties
 #define STANDARD_HEAT_CAPACITY  4,200 // J/kg°C
 #define	STANDARD_DENSITY 997 // Kg/m³
@@ -31,6 +32,21 @@
 
 #define AVG_BY_HITS(x,y) (x/y)
 #define PICO_TO_NANO(t)  (t*1000)
-
 #define NUMBER_OF_SAMPLES 	10
+
+/*Speed vs Degree Celcius*/
+const uint16_t SPEED_OF_SOUND_IN_WATER_LUT[11] = { 1403, 1427, 1447, 1481, 1507,
+		1526, 1541, 1552, 1555, 1555, 1550 };
+
+#define FLUID_VELOCITY(x,y,z) 	(x*((y-z)/(y+z)))
+
+#define PIPE_AREA	//PI*D*D
+
+#define FLOW_RATE(x)   (x*PIPE_AREA)
+
+#define STAND_VAR(x,y)    (sqrt((x- (x / y))/ (y - 1)))
+
+#define HEAT_ENERGY(x,dt)   (x*STANDARD_DENSITY*\
+		STANDARD_HEAT_CAPACITY*dt*SAMPLING_RATE)
+
 #endif /* SIGNAL_CONSTANTS_H_ */

@@ -30,6 +30,8 @@ extern volatile uint8_t tx_buff[];
 extern volatile snd_req_status c_status;
 extern volatile uint16_t current_baud;
 
+volatile uint8_t c_page = 0; //default LCD page
+
 /*!-- Temperature */
 volatile float t_PT1 = 0;
 volatile float t_PT2 = 0;
@@ -38,6 +40,7 @@ volatile float t_PT4 = 0;
 volatile float t_REF = 0;
 volatile float t_COLD = 0; //In degree celcius
 volatile float t_HOT = 0; //In degree celcius
+volatile float t_DIFF = 0; //In degree celcius
 
 // Correction factor for clock frequency
 float CLKHS_freq_corr_fact = 1.000;
@@ -74,6 +77,14 @@ float TOF_sum_sum = 0;
 float TOF_diff_square_sum = 0;
 float Std_Dev_of_Diff = 0;
 uint16_t sum_counter = 1; // starts with 1
+
+/*!--Flow Rate*/
+volatile uint16_t c_flowRate = 0;
+uint16_t vf_t; //velocity at temp T
+uint16_t vs_t; // speed of sound in water at T
+
+/*!--Energy */
+volatile uint64_t c_eReg; //energy register
 
 /*!--Flags */
 typedef struct {
@@ -114,6 +125,7 @@ int main(void) {
 	_enable_interrupt();
 	__bis_SR_register(GIE);
 
+	write_symbol(logo, ON);
 	while (1) {
 		if (flags._powerFail) {
 			if (_pSource) {
@@ -125,6 +137,26 @@ int main(void) {
 			}
 			_pSource ^= _pSource;
 			flags._powerFail = 0;
+		}
+		if (flags._pushBTN) {
+			//Handle tampering
+			//TODO: When to clear
+			write_symbol(warning, ON);
+		}
+		if (flags._reedSW) {
+			//Handle LCD scroll
+			switch (c_page) {
+			case 1:
+				break;
+			case 2:
+				break;
+			case 3:
+				break;
+			case 4:
+				break;
+			default:
+				break;
+			}
 		}
 		/*measurement cycle -> 15 seconds sampling*/
 		if (_sampling_timeUp) {
@@ -143,9 +175,10 @@ int main(void) {
 			}
 			//calculations depend on reigster config settings
 			float iv = transfer4B(OPCODE_READ_ADDRESS, 0, 0, 0, 0) / pow(2, 16);
-			CLKHS_freq_corr_fact = 61.03515625 / iv * CLKHS_freq;
+			CLKHS_freq_corr_fact = (61.03515625 / iv) * CLKHS_freq;
 
 			CLKHS_freq_cal = CLKHS_freq * CLKHS_freq_corr_fact; // Calibrated Clock frequency
+
 			//2. Measure temperature
 			float dv = CLKHS_freq_cal * pow(2, 16);
 			flags._tdcINT = 0; // clear flag
@@ -168,6 +201,9 @@ int main(void) {
 				Ratio_RT2_Rref = t_PT2 / t_REF * corr_fact;
 				R1 = Ratio_RT2_Rref * R0_at_0C;
 				t_HOT = CAL_TEMP(R2);
+
+				//Change in temp
+				t_DIFF = abs(t_HOT - t_COLD);
 			}
 			//3. Measure time of flight
 			uint8_t _ec = 0; //error count
@@ -247,10 +283,8 @@ int main(void) {
 				if (sum_counter > NUMBER_OF_SAMPLES) // Output after no_of_avg measurements
 				{
 					TOF_diff_avg = TOF_diff_sum / NUMBER_OF_SAMPLES;
-					Std_Dev_of_Diff = sqrt(
-							(TOF_diff_square_sum
-									- (TOF_diff_square_sum / NUMBER_OF_SAMPLES))
-									/ (NUMBER_OF_SAMPLES - 1));
+					Std_Dev_of_Diff = STAND_VAR(TOF_diff_square_sum,
+							NUMBER_OF_SAMPLES);
 
 					Std_Dev_of_Diff = 0;
 					TOF_diff_sum = 0;
@@ -258,6 +292,13 @@ int main(void) {
 					sum_counter = 1;
 					PW1ST = 0;
 				}
+				//3. Measure flow rate
+				vf_t = FLUID_VELOCITY(vs_t, TOF_up, TOF_down);
+				c_flowRate = FLOW_RATE(vf_t);
+
+				//4. Measure energy
+				c_eReg += HEAT_ENERGY(c_flowRate, t_DIFF);
+
 			}
 		}
 		if (c_status == response_ready) {
@@ -373,6 +414,7 @@ void __attribute__ ((interrupt(PORT1_VECTOR))) ISR_PORT1 (void)
 	case 0x00:
 		break; /* No Interrupt Pending */
 	case 0x02:
+		flags._pushBTN = 1;
 		break; /* Port 1.0 Interrupt */
 	case 0x04:
 		flags._powerFail = 1; //set M-Bus power fail flag
@@ -381,7 +423,7 @@ void __attribute__ ((interrupt(PORT1_VECTOR))) ISR_PORT1 (void)
 		flags._tdcINT = 1; // set int_flag
 		break; /* Port 1.2 Interrupt */
 	case 0x08: /* Port 1.3 Interrupt */
-		LPM3_EXIT;
+		flags._reedSW = 1;
 		break;
 	case 0x0A:
 		break; /* Port 1.4 Interrupt */
