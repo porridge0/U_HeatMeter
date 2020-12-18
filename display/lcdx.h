@@ -13,16 +13,6 @@
 
 #include <stdint.h>
 
-typedef enum _unit {
-	kilowatt_hour,
-	megawatt_hour,
-	cubic_meters_per_hour,
-	liters_per_hour,
-	btu,
-	joules,
-	kelvin,
-	celcius,
-} unit;
 typedef enum _flowDir {
 	dir_left = 0, dir_right = 1, dir_none = 2
 } flowDir;
@@ -54,7 +44,15 @@ typedef enum _symbol {
 	dc_point6,
 	dc_point7,
 	column1,
-	column2
+	column2,
+	kilowatt_hour,
+	megawatt_hour,
+	cubic_meters_per_hour,
+	liters_per_hour,
+	btu,
+	joules,
+	kelvin,
+	celcius
 } LCD_symbol;
 
 void lcd_config();
@@ -67,8 +65,8 @@ void write_num(uint32_t digitPlace, uint64_t bcdValue, uint8_t decimalPts,
 void write_minus(uint8_t pos);
 void clear_digits();
 void write_symbol(LCD_symbol sym, uint8_t state);
-void write_unit(unit unit, uint8_t state);
 void write_dc_pt(uint8_t point);
+void write_time(uint8_t day, uint8_t month, uint16_t year);
 void all_on();
 void all_off();
 

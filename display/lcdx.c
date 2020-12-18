@@ -13,6 +13,7 @@
 #include <msp430.h>
 #include <assert.h>
 #include "lcdx.h"
+#include <string.h>
 
 /*********************************************************************************************************************/
 /* LCD Main Numeric dispaly Digit Segment-to-Register Mapping.
@@ -225,12 +226,57 @@ volatile uint8_t* NUM_REGS[NUM_DIGITS][2] = { { &LCDM8, &LCDM9 }, { &LCDM7,
 		&LCDM8 }, { &LCDM6, &LCDM7 }, { &LCDM5, &LCDM6 }, { &LCDM10, &LCDM11 },
 		{ &LCDM4 }, { &LCDM12 }, { &LCDM13 } };
 
-const uint8_t MASK_H[10] = { 0x7, 0x6, 0xE, 0x7, 0x6, 0x5, 0x5, 0x7, 0x7, 0x7 };
-const uint8_t MASK_L[10] = { 0xD, 0x0, 0xE, 0xA, 0xB, 0xB, 0xF, 0x0, 0xF, 0xB };
-const uint8_t MASK_2_H[10] =
-		{ 0x5, 0x7, 0x6, 0x2, 0x3, 0x3, 0x7, 0x0, 0x7, 0x3 };
-const uint8_t MASK_2_L[10] =
-		{ 0xF, 0x9, 0xB, 0xF, 0x6, 0xD, 0xD, 0x7, 0xF, 0xF };
+//const uint8_t MASK_H[10] = { 0x7, 0x6, 0xE, 0x7, 0x6, 0x5, 0x5, 0x7, 0x7, 0x7 };
+//const uint8_t MASK_L[10] = { 0xD, 0x0, 0xE, 0xA, 0xB, 0xB, 0xF, 0x0, 0xF, 0xB };
+//const uint8_t MASK_2_H[10] =
+//		{ 0x5, 0x7, 0x6, 0x2, 0x3, 0x3, 0x7, 0x0, 0x7, 0x3 };
+//const uint8_t MASK_2_L[10] =
+//		{ 0xF, 0x9, 0xB, 0xF, 0x6, 0xD, 0xD, 0x7, 0xF, 0xF };
+
+/*
+ * MAPPING 1
+ *
+ * DIGITS - 1 , 2 , 3 , 4
+ *
+ */
+const uint8_t BITMASK_1_H[10] = { 0x05, 0x00, 0x06, 0x02, 0x03, 0x03, 0x07,
+		0x00, 0x07, 0x03 };
+const uint8_t BITMASK_1_L[10] = { 0xF0, 0x60, 0xB0, 0xF0, 0x60, 0xD0, 0xD0,
+		0x70, 0xF0, 0xF0 };
+
+/*
+ * MAPPING 2
+ *
+ * DIGITS - 5
+ *
+ */
+const uint8_t BITMASK_2_H[10] = { 0x0F, 0x06, 0x0B, 0x0F, 0x06, 0x0D, 0x0D,
+		0x07, 0x0F, 0x0F };
+const uint8_t BITMASK_2_L[10] = { 0x50, 0x00, 0x60, 0x20, 0x30, 0x30, 0x70,
+		0x00, 0x70, 0x30 };
+
+/*
+ * MAPPING 3
+ *
+ * DIGITS - 6
+ *
+ */
+//const uint8_t BITMASK_3_H[10] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+//		0x00, 0x00, 0x00 };
+const uint8_t BITMASK_3[10] = { 0x5F, 0x06, 0x6B, 0x2F, 0x36, 0x3D, 0x7D, 0x07,
+		0x7F, 0x3F };
+
+/*
+ * MAPPING 3
+ *
+ * DIGITS - 7 , 8
+ *
+ */
+//const uint8_t BITMASK_4_H[10] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+//		0x00, 0x00, 0x00 };
+const uint8_t BITMASK_4[10] = { 0xF5, 0x60, 0xB6, 0xF2, 0x63, 0xD3, 0xD7, 0x70,
+		0xF7, 0xF3 };
+
 /*!
  * @brief Function Name: write_digit
  *
@@ -242,41 +288,62 @@ const uint8_t MASK_2_L[10] =
  *
  * @return none
  */
+//	/*test - write 0-9 on the first digit - i.e , digit = 1*/
+//	// registers are LCDM8 and LCDM9
+//	LCDM8 = BIT4 + BIT5 + BIT6 + BIT7;
+//	LCDM9 = BIT0 + BIT2;
+//	/*test - write 0-9 on the SECOND digit - i.e , digit = 2*/
+//	// registers are LCDM7 and LCDM8
+//	LCDM7 = BIT4 + BIT5 + BIT6 + BIT7;
+//	LCDM8 = BIT0 + BIT2;
+//	/*test - write 0-9 on the THIRD digit - i.e , digit = 3*/
+//	// registers are LCDM6 and LCDM7
+//	LCDM6 = BIT4 + BIT5 + BIT6 + BIT7;
+//	LCDM7 = BIT0 + BIT2;
+//	/*test - write 0-9 on the FOURTH digit - i.e , digit = 4*/
+//	// registers are LCDM5 and LCDM6
+//	LCDM5 = BIT4 + BIT5 + BIT6 + BIT7;
+//	LCDM6 = BIT0 + BIT2;
+//	/*test - write 0-9 on the FIFTH digit - i.e , digit = 5*/
+//	// registers are LCDM10 and LCDM11
+//	LCDM10 = BIT4 + BIT6;
+//	LCDM11 = BIT0 + BIT1 + BIT2 + BIT3;
+//	/*test - write 0-9 on the SIXTH digit - i.e , digit = 6*/
+//	// registers are LCDM4
+//	LCDM4 = BIT0 + BIT1 + BIT2 + BIT3 + BIT4 + BIT6;
+//	/*test - write 0-9 on the SEVENTH digit - i.e , digit = 7*/
+//	// registers are LCDM12
+//	LCDM12 = BIT0 + BIT2 + BIT4 + BIT5 + BIT6 + BIT7;
+//	/*test - write 0-9 on the EIGHTH digit - i.e , digit = 8*/
+//	// registers are LCDM13
+//	LCDM13 = BIT0 + BIT2 + BIT4 + BIT5 + BIT6 + BIT7;
 void write_digit(uint8_t digit, uint8_t num) {
-
-	//	/*test - write 0-9 on the first digit - i.e , digit = 1*/
-	//	// registers are LCDM8 and LCDM9
-	//	LCDM8 = BIT4 + BIT5 + BIT6 + BIT7;
-	//	LCDM9 = BIT0 + BIT2;
-	//	/*test - write 0-9 on the SECOND digit - i.e , digit = 2*/
-	//	// registers are LCDM7 and LCDM8
-	//	LCDM7 = BIT4 + BIT5 + BIT6 + BIT7;
-	//	LCDM8 = BIT0 + BIT2;
-	//	/*test - write 0-9 on the THIRD digit - i.e , digit = 3*/
-	//	// registers are LCDM6 and LCDM7
-	//	LCDM6 = BIT4 + BIT5 + BIT6 + BIT7;
-	//	LCDM7 = BIT0 + BIT2;
-	//	/*test - write 0-9 on the FOURTH digit - i.e , digit = 4*/
-	//	// registers are LCDM5 and LCDM6
-	//	LCDM5 = BIT4 + BIT5 + BIT6 + BIT7;
-	//	LCDM6 = BIT0 + BIT2;
-	//	/*test - write 0-9 on the FIFTH digit - i.e , digit = 5*/
-	//	// registers are LCDM10 and LCDM11
-	//	LCDM10 = BIT4 + BIT6;
-	//	LCDM11 = BIT0 + BIT1 + BIT2 + BIT3;
-	//	/*test - write 0-9 on the SIXTH digit - i.e , digit = 6*/
-	//	// registers are LCDM4
-	//	LCDM4 = BIT0 + BIT1 + BIT2 + BIT3 + BIT4 + BIT6;
-	//	/*test - write 0-9 on the SEVENTH digit - i.e , digit = 7*/
-	//	// registers are LCDM12
-	//	LCDM12 = BIT0 + BIT2 + BIT4 + BIT5 + BIT6 + BIT7;
-	//	/*test - write 0-9 on the EIGHTH digit - i.e , digit = 8*/
-	//	// registers are LCDM13
-	//	LCDM13 = BIT0 + BIT2 + BIT4 + BIT5 + BIT6 + BIT7;
 	assert((digit < NUM_DIGITS) && (num <= 9));
-	/* Activate all segments that make up the seven segment digit */
-	*(NUM_REGS[digit][0]) |= MASK_H[num];
-	*(NUM_REGS[digit][1]) |= MASK_L[num];
+
+	//clear digits first
+	if (digit == 7 || digit == 8) {
+		*(NUM_REGS[digit][0]) &= 0x00;
+		/* Activate all segments that make up the seven segment digit */
+		*(NUM_REGS[digit][0]) |= BITMASK_4[num];
+	} else if (digit == 6) {
+		*(NUM_REGS[digit][0]) &= 0x00;
+		/* Activate all segments that make up the seven segment digit */
+		*(NUM_REGS[digit][0]) |= BITMASK_3[num];
+	} else if (digit == 5) {
+		*(NUM_REGS[digit][0]) &= 0x00;
+		*(NUM_REGS[digit][1]) &= 0x00;
+		/* Activate all segments that make up the seven segment digit */
+		*(NUM_REGS[digit][0]) |= BITMASK_2_L[num];
+		*(NUM_REGS[digit][1]) |= BITMASK_2_H[num];
+	} else {
+		*(NUM_REGS[digit][0]) &= 0x00;
+		*(NUM_REGS[digit][1]) &= 0x00;
+
+		/* Activate all segments that make up the seven segment digit */
+		*(NUM_REGS[digit][0]) |= BITMASK_1_L[num];
+		*(NUM_REGS[digit][1]) |= BITMASK_1_H[num];
+	}
+
 }
 
 /*!
@@ -297,12 +364,15 @@ void write_num(uint32_t digitPlace, uint64_t bcdValue, uint8_t decimalPts,
 
 	volatile uint8_t i;
 	volatile uint64_t _bcdValue;
+	volatile uint8_t digit;
 
 	_bcdValue = bcdValue;
 	for (i = digitPlace; i < NUM_DIGITS; i++) /*i = digitPlace means -> start writing from the specified digit place  */
 	{
-		write_digit(i, (0x000000000000000F & _bcdValue));
-		_bcdValue >>= 4;
+		digit = _bcdValue % 10;
+		write_digit(i, digit);
+		_bcdValue -= digit; // deduct digit
+		_bcdValue /= 10; // divide by 10
 
 		if (_bcdValue == 0 && i >= decimalPts) {
 			break;
@@ -316,7 +386,7 @@ void write_num(uint32_t digitPlace, uint64_t bcdValue, uint8_t decimalPts,
 }
 
 /*!
- * @brief Function Name: LCD_TurnOnSym
+ * @brief Function Name: write_symbol
  *
  * The function turns on/off a symbol on the LCD based on the state value.
  *
@@ -336,7 +406,14 @@ void write_num(uint32_t digitPlace, uint64_t bcdValue, uint8_t decimalPts,
  *              \li battery_status: device is being powered from the battery
  *              \li column1: ?
  *              \li column2: ?
- *
+ *     			\li kilowatt_hour: kwh
+ *              \li megawatt_hour: Mwh
+ *              \li cubic_meters_per_hour: m3/h
+ *              \li liters_per_hour: lt/h
+ *              \li btu: BTU
+ *              \li joules: J
+ *              \li kelvin: K
+ *              \li celcius: C
  *
  * @return none
  */
@@ -351,19 +428,47 @@ void write_symbol(LCD_symbol sym, uint8_t state) {
 		break;
 	case page_1:
 		/*!--todo: include digit*/
-		state == ON ? LCDM10 |= BIT2 : LCDM10 &= ~BIT2;
+		if (state == ON) {
+			LCDM10 |= BIT2;
+			LCDM10 &= ~BIT1;
+			LCDM10 &= ~BIT0;
+			LCDM9 &= ~BIT4;
+			return;
+		}
+		LCDM10 &= ~BIT2;
 		break;
 	case page_2:
 		/*!--todo: include digit*/
-		state == ON ? LCDM10 |= BIT1 : LCDM10 &= ~BIT1;
+		if (state == ON) {
+			LCDM10 |= BIT1;
+			LCDM10 &= ~BIT2;
+			LCDM10 &= ~BIT0;
+			LCDM9 &= ~BIT4;
+			return;
+		}
+		LCDM10 &= ~BIT1;
 		break;
 	case page_3:
 		/*!--todo: include digit*/
-		state == ON ? LCDM10 |= BIT0 : LCDM10 &= ~BIT0;
+		if (state == ON) {
+			LCDM10 |= BIT0;
+			LCDM10 &= ~BIT1;
+			LCDM10 &= ~BIT2;
+			LCDM9 &= ~BIT4;
+			return;
+		}
+		LCDM10 &= ~BIT0;
 		break;
 	case page_4:
 		/*!--todo: include digit*/
-		state == ON ? LCDM9 |= BIT4 : LCDM9 &= ~BIT4;
+		if (state == ON) {
+			LCDM9 |= BIT4;
+			LCDM10 &= ~BIT0;
+			LCDM10 &= ~BIT1;
+			LCDM10 &= ~BIT2;
+			return;
+		}
+		LCDM9 &= ~BIT4;
 		break;
 	case summation:
 		if (state == ON) {
@@ -423,6 +528,7 @@ void write_symbol(LCD_symbol sym, uint8_t state) {
 		break;
 	case bus_line:
 		if (state == ON) {
+			LCDM9 &= ~BIT3;
 			LCDM10 |= BIT7;
 			return;
 		}
@@ -437,6 +543,7 @@ void write_symbol(LCD_symbol sym, uint8_t state) {
 		break;
 	case battery_status:
 		if (state == ON) {
+			LCDM10 &= ~BIT7;
 			LCDM9 |= BIT3;
 			return;
 		}
@@ -456,29 +563,6 @@ void write_symbol(LCD_symbol sym, uint8_t state) {
 		}
 		LCDM5 &= ~BIT1;
 		break;
-	default:
-		break;
-	}
-}
-/*!
- * @brief Function Name: write_unit
- *
- * The function turns on/off a measurement unit on LCD
- *
- * @param sym: Parameter specifiying unit to be displayed. Possible values are:
- *              \li kilowatt_hour: kwh
- *              \li megawatt_hour: Mwh
- *              \li cubic_meters_per_hour: m3/h
- *              \li liters_per_hour: lt/h
- *              \li btu: BTU
- *              \li joules: J
- *              \li kelvin: K
- *              \li celcius: C
- *
- * @return none
- */
-void write_unit(unit unit, uint8_t state) {
-	switch (unit) {
 	case kilowatt_hour:
 		if (state == ON) {
 			/*!--turn off other unit forms first*/
@@ -567,6 +651,7 @@ void write_unit(unit unit, uint8_t state) {
 		break;
 	}
 }
+
 /*!
  * @brief Function Name: write_dc_pt
  *
@@ -577,7 +662,9 @@ void write_unit(unit unit, uint8_t state) {
  * @return none
  */
 void write_dc_pt(uint8_t decimal_pt) {
-	switch (decimal_pt) {
+	uint8_t dP = 8 - decimal_pt;
+
+	switch (dP) {
 	case 1:
 		LCDM4 &= ~BIT7;
 		LCDM5 &= ~BIT2;
@@ -644,5 +731,22 @@ void write_dc_pt(uint8_t decimal_pt) {
 	default:
 		break;
 	}
+}
+/*!
+ * @brief Function Name: write_time
+ *
+ * Displays the current date, month and year all separated by a period.
+ *
+ * @param sym: day, month and year
+ *
+ * @return none
+ */
+void write_time(uint8_t day, uint8_t month, uint16_t year) {
+	assert(year <= 0x4095);
+
+	//write year
+	write_num(0, year, 4, 1);// first decimal point to separate month and year
+	write_num(4, month, 6, 1); // second decimal point to separate day and month
+	write_num(6, day, 0, 1);
 }
 #endif

@@ -15,7 +15,6 @@
 #include "config/pin_io.h"
 #include "comm/app.h"
 #include "comm/phy.h"
-#include "util/params.h"
 #include "util/clock.h"
 #include "config/system.h"
 #include "signal/constants.h"
@@ -26,9 +25,7 @@
  * main.c
  */
 /*!-- GLOBALS */
-extern volatile uint8_t tx_buff[];
 extern volatile snd_req_status c_status;
-extern volatile uint16_t current_baud;
 
 volatile uint8_t c_page = 0; //default LCD page
 
@@ -79,13 +76,12 @@ float Std_Dev_of_Diff = 0;
 uint16_t sum_counter = 1; // starts with 1
 
 /*!--Flow Rate*/
-volatile uint16_t c_flowRate = 0;
+volatile uint16_t c_flowRate;
 uint16_t vf_t; //velocity at temp T
 uint16_t vs_t; // speed of sound in water at T
 
-/*!--Energy */
-volatile uint64_t c_eReg; //energy register
 
+volatile uint64_t c_prevEnReg = 0; //previously logged reg value
 /*!--Flags */
 typedef struct {
 	uint8_t _reedSW;
@@ -93,6 +89,12 @@ typedef struct {
 	uint8_t _tdcINT;
 	uint8_t _pushBTN;
 } sys_flags;
+
+#pragma PERSISTENT(_m_index)
+/*!-- Track logged month values
+ *  Index starts at 0 corresponding to start date(month) of operation.
+ */
+volatile uint8_t _m_index = 0;
 
 volatile sys_flags flags = { ._reedSW = 0, ._powerFail = 0, ._tdcINT = 0,
 		._pushBTN = 0 };
@@ -103,9 +105,13 @@ volatile sys_flags flags = { ._reedSW = 0, ._powerFail = 0, ._tdcINT = 0,
 volatile uint8_t _pSource = 0;
 
 extern volatile uint8_t _sampling_timeUp;
-volatile stored_list *runningList;
-static void gpio_config(void);
+extern volatile uint8_t _page_timeUp;
 
+static void gpio_config(void);
+void inline scroll();
+
+//#pragma DATA_SECTION(systemData, ".infoC");
+//SystemData_T systemData;
 int main(void) {
 	// Disable the GPIO power-on default high-impedance mode to activate
 	// previously configured port settings
@@ -118,7 +124,7 @@ int main(void) {
 	all_off();
 #endif
 	rtc_config();
-	ux_config();
+	ux_config(THREE_HUNDERED);
 	//uint8_t *pa_changed_status = (uint8_t *) calloc(1, sizeof(uint8_t));
 	start_tdc();
 
@@ -140,33 +146,19 @@ int main(void) {
 		}
 		if (flags._pushBTN) {
 			//Handle tampering
-			//TODO: When to clear
+			//TODO: When to clear : WAIT FOR A CLEAR COMMNAD
 			write_symbol(warning, ON);
 		}
 		if (flags._reedSW) {
 			//Handle LCD scroll
-			switch (c_page) {
-			case 1:
-				break;
-			case 2:
-				break;
-			case 3:
-				break;
-			case 4:
-				break;
-			default:
-				break;
-			}
+			scroll();
 		}
 		/*measurement cycle -> 15 seconds sampling*/
 		if (_sampling_timeUp) {
 			/*
 			 * Wait for interrupt before reading registers
 			 * --------------------------------------------
-			 * 1. Calibrate high spped clock
-			 *
-			 *
-			 *
+			 * 1. Calibrate high speed clock
 			 */
 			_sampling_timeUp = 0;
 			startCalRes();
@@ -201,7 +193,6 @@ int main(void) {
 				Ratio_RT2_Rref = t_PT2 / t_REF * corr_fact;
 				R1 = Ratio_RT2_Rref * R0_at_0C;
 				t_HOT = CAL_TEMP(R2);
-
 				//Change in temp
 				t_DIFF = abs(t_HOT - t_COLD);
 			}
@@ -296,21 +287,155 @@ int main(void) {
 				vf_t = FLUID_VELOCITY(vs_t, TOF_up, TOF_down);
 				c_flowRate = FLOW_RATE(vf_t);
 
-				//4. Measure energy
-				c_eReg += HEAT_ENERGY(c_flowRate, t_DIFF);
+				//4. Measure cumulative energy
+				c_enReg += IN_MILLI_JOULES(HEAT_ENERGY(c_flowRate, t_DIFF));
 
 			}
+		}
+		if (!_page_timeUp) {
+			scroll();
+			_page_timeUp = 5;
 		}
 		if (c_status == response_ready) {
 			x_lnk_res();
 		}
+		if (_dayChanged == 1) {
+			//log registers
+		}
 		if (_monChanged == 1) {
+			/*Capture value at end of month */
+			_month_reg[_m_index].m_reg = c_enReg - c_prevEnReg;
+			_month_reg[_m_index].timeStamp = currentTime;
+			_m_index++;
+			c_prevEnReg = c_enReg; //copy current value
+			if (_m_index > 11) {
+				_m_index = 0;
+			}
 			/*track month and day changes to update running registers*/
 			if (_yrChanged == 1) {
 				/*todo*/
 			}
 		}
 	}
+}
+
+/* Display different measured and instantaneous
+ * parameters on the LCD.
+ *
+ * Delay between consecutive pages set at 5 seconds
+ *
+ * */
+void inline scroll() {
+	switch (c_page) {
+	case 0: // this is actually the first page
+
+		/*Display energy*/
+		write_symbol(page_1, ON);
+		write_num(0, c_enReg, 3, 1); //decimal point 3
+		write_symbol(joules, ON);
+		write_symbol(flow_dir_left, ON);
+		write_symbol(flow_dir_right, ON);
+		write_symbol(summation, ON);
+
+		write_symbol(alarm_clk, OFF);
+		write_symbol(calendar, OFF);
+		write_symbol(serial_number, OFF);
+		write_symbol(barcode, OFF);
+		write_symbol(kilowatt_hour, OFF);
+		write_symbol(megawatt_hour, OFF);
+		write_symbol(liters_per_hour, OFF);
+		write_symbol(btu, OFF);
+		write_symbol(kelvin, OFF);
+		write_symbol(celcius, OFF);
+		write_symbol(time_diff, OFF);
+
+		break;
+	case 1:
+		/*Display temperature*/
+		write_symbol(page_2, ON);
+		write_num(0, t_DIFF, 0, 1);
+		write_symbol(celcius, ON);
+
+		write_symbol(alarm_clk, OFF);
+		write_symbol(calendar, OFF);
+		write_symbol(serial_number, OFF);
+		write_symbol(barcode, OFF);
+		write_symbol(kilowatt_hour, OFF);
+		write_symbol(megawatt_hour, OFF);
+		write_symbol(liters_per_hour, OFF);
+		write_symbol(btu, OFF);
+		write_symbol(kelvin, OFF);
+		write_symbol(summation, OFF);
+		write_symbol(time_diff, OFF);
+
+		break;
+	case 2:
+		/*Display flow rate*/
+		write_symbol(page_3, ON);
+		write_num(0, c_flowRate, 1, 1); //decimal point 1
+		write_symbol(liters_per_hour, ON);
+
+		write_symbol(alarm_clk, OFF);
+		write_symbol(calendar, OFF);
+		write_symbol(serial_number, OFF);
+		write_symbol(barcode, OFF);
+		write_symbol(kilowatt_hour, OFF);
+		write_symbol(megawatt_hour, OFF);
+		write_symbol(liters_per_hour, OFF);
+		write_symbol(btu, OFF);
+		write_symbol(kelvin, OFF);
+		write_symbol(celcius, OFF);
+		write_symbol(summation, OFF);
+		write_symbol(time_diff, OFF);
+
+		break;
+	case 3:
+		/*Display current time*/
+		write_symbol(page_4, ON);
+		write_symbol(calendar, ON);
+		write_time(currentTime.day, currentTime.month, currentTime.year);
+
+		write_symbol(cubic_meters_per_hour, OFF);
+		write_symbol(alarm_clk, OFF);
+		write_symbol(serial_number, OFF);
+		write_symbol(barcode, OFF);
+		write_symbol(kilowatt_hour, OFF);
+		write_symbol(megawatt_hour, OFF);
+		write_symbol(liters_per_hour, OFF);
+		write_symbol(btu, OFF);
+		write_symbol(kelvin, OFF);
+		write_symbol(celcius, OFF);
+		write_symbol(summation, OFF);
+		write_symbol(time_diff, OFF);
+
+		break;
+	case 4:
+		/*Display serial number*/
+		write_symbol(page_4, OFF);
+		write_symbol(serial_number, ON);
+		write_symbol(barcode, ON);
+		write_num(0, devInfo.serialNumber, 0, 1); //decimal point 1
+
+		write_symbol(cubic_meters_per_hour, OFF);
+		write_symbol(alarm_clk, OFF);
+		write_symbol(calendar, OFF);
+		write_symbol(kilowatt_hour, OFF);
+		write_symbol(megawatt_hour, OFF);
+		write_symbol(liters_per_hour, OFF);
+		write_symbol(btu, OFF);
+		write_symbol(kelvin, OFF);
+		write_symbol(summation, OFF);
+		write_symbol(celcius, OFF);
+		write_symbol(time_diff, OFF);
+
+		break;
+	default:
+		break;
+	}
+	c_page++;
+	if (c_page > 4)
+		c_page = 0;
+
 }
 
 static void gpio_config(void) {

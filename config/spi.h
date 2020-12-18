@@ -30,7 +30,7 @@
 							(CNFG_TDC_SPI_UCxIE  &= ~(UCTXIE + UCRXIE));  \
 							(CNFG_PORT_1_OUT    |= CNFG_TDC_SLVSELCT_BIT); \
 						}
-const extern boolean SPI_CONTINUE = TRUE;
+const extern boolean SPI_CONTINUE;
 /* Configure SPI registers for operation */
 void spi_config();
 uint8_t spi_transfer(uint8_t byte, boolean end);

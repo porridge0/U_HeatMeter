@@ -35,18 +35,26 @@
 #define NUMBER_OF_SAMPLES 	10
 
 /*Speed vs Degree Celcius*/
-const uint16_t SPEED_OF_SOUND_IN_WATER_LUT[11] = { 1403, 1427, 1447, 1481, 1507,
-		1526, 1541, 1552, 1555, 1555, 1550 };
+//const uint16_t SPEED_OF_SOUND_IN_WATER_LUT[11] = { 1403, 1427, 1447, 1481, 1507,
+//		1526, 1541, 1552, 1555, 1555, 1550 };
 
-#define FLUID_VELOCITY(x,y,z) 	(x*((y-z)/(y+z)))
+#define FLUID_VELOCITY(x,y,z) 	(uint16_t)(x*((y-z)/(y+z)))
 
-#define PIPE_AREA	//PI*D*D
+#define PIPE_SIZE    (float)0.0127// diameter in meters(0.5)
 
-#define FLOW_RATE(x)   (x*PIPE_AREA)
+#define SCALED_PIPE_SIZE	PIPE_SIZE*10000
+
+#define M_PI acos(-1.0)
+
+#define FLOW_RATE(x)   (float)(x*M_PI*SCALED_PIPE_SIZE*SCALED_PIPE_SIZE)
 
 #define STAND_VAR(x,y)    (sqrt((x- (x / y))/ (y - 1)))
 
 #define HEAT_ENERGY(x,dt)   (x*STANDARD_DENSITY*\
 		STANDARD_HEAT_CAPACITY*dt*SAMPLING_RATE)
+
+/* Energy register/accumulator in units of mili Joules for
+ * better resolution.*/
+#define IN_MILLI_JOULES(x) 	(x*1000)
 
 #endif /* SIGNAL_CONSTANTS_H_ */

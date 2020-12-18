@@ -24,11 +24,11 @@ typedef enum {
 #define _ENABLE_SYSTEM_WIDE_DEFS_
 
 #ifdef _ENABLE_SYSTEM_WIDE_DEFS_
-void __ATOMIZE() {
+void inline __ATOMIZE() {
 	__disable_interrupt();
 	__no_operation();
 }
-void __END_ATOMIC() {
+void inline __END_ATOMIC() {
 	__enable_interrupt();
 }
 void inline sysClock_config() {

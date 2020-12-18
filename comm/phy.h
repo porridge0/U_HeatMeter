@@ -14,6 +14,7 @@
 #include <stdint.h>
 #include <math.h>
 #include <msp430.h>
+#include "../config/system.h"
 
 /*
  * EN-13757-2 Link Layer Requirements:
@@ -162,9 +163,9 @@
 #define ENABLE_UX_INT    (UCA1IE |= UCTXIE)
 #endif
 
-#define TRUE_PA  (uint8_t)0
-#define TRUE_SA (uint8_t)1
-#define FALSE_NA (uint8_t)2
+#define TRUE_PA  (int8_t)0
+#define TRUE_SA (int8_t)1
+#define FALSE_NA (int8_t)-1
 
 typedef enum {
 	THREE_HUNDERED = 300,
@@ -177,10 +178,23 @@ typedef enum {
 	THIRTY_EIGHT_THOUSAND_FOUR_HUNDRED = 38400
 } working_baud_rates;
 
-/*!-- Default primary address of all slaves at manufature.
+typedef struct {
+	uint8_t primaryAddress;
+	uint32_t serialNumber;
+	uint32_t productNumber;
+	uint32_t productDate;
+} deviceInfo;
+
+extern deviceInfo devInfo;
+/*!-- Default primary address of all slaves at manufacture is 0.
  *  Note: This value can be overwritten(changed) with an application level
  *   master command. */
-extern const uint8_t UNCONFIGURED_PRIMARY_ADDRESS;
+extern volatile uint8_t PRIMARY_ADDRESS;
+/*	Serial Number (4-Bytes)
+ * 	Example: SN: 30001234
+ * 	0x34 0x12 0x00 0x30 Little endian
+ */
+extern volatile uint32_t SERIAL_NUMBER;
 
 typedef enum {
 	error, valid
@@ -213,33 +227,43 @@ extern volatile uint16_t current_baud;
 extern volatile uint8_t tx_buff[];
 extern volatile snd_req_status c_status;
 extern volatile lnk_frame *r_frame;
+extern volatile lnk_frame *rsp_frame;
 
-void ux_config();
+void ux_config(uint16_t baudRate);
 void inline rx_lnk_frame(uint8_t data);
 void tx_lnk_frame(uint8_t length);
 void x_lnk_res(void);
 void set_baudRate(uint16_t baudRate);
 void inline x_reset();
 cs_result inline t_validator();
+uint8_t inline getCheksum(volatile lnk_frame *frame);
 void inline res_delay();
 void inline inter_byte_time_out();
 void inline autospeed_detect();
 
-/*!-- copy secondary address */
-uint8_t inline validate_sa() {
-	uint64_t sec_add;
+/*!-- check addressing type */
+int8_t inline c_addressing() {
+	uint8_t PA = r_frame->a_field;
+	uint64_t SA;
 	uint8_t sb_c = 0;
-	if (r_frame->a_field != BROADCAST_NO_REPLY) {
-		if (r_frame->a_field == BROADCAST_NETWORK_LAYER) {
-			for (; sb_c < 8; sb_c++) {
-				sec_add |= *r_frame->user_data;
-				sec_add <<= 8;
+
+	/*Ensure data integrity*/
+	__ATOMIZE();
+	if (PA != BROADCAST_NO_REPLY) {
+		if (PA == BROADCAST_NETWORK_LAYER) {
+			for (; sb_c < sizeof(uint32_t); sb_c++) {
+				SA |= *r_frame->user_data;
+				SA <<= 8;
 				r_frame->user_data++;
 			}
-			return sec_add == SECONDARY_ADDRESS ? TRUE_SA : FALSE_NA ;
+			__END_ATOMIC();
+			return SA == devInfo.serialNumber ? TRUE_SA : FALSE_NA;
 		}
-		return TRUE_PA ;
+		__END_ATOMIC();
+		return PA == devInfo.primaryAddress ? TRUE_PA : FALSE_NA;
 	}
-	return FALSE_NA ;
+	__END_ATOMIC();
+	return FALSE_NA;
 }
+
 #endif /* COMM_PHY_H_ */

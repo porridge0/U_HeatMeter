@@ -14,6 +14,7 @@
 #include <stdint.h>
 #include <string.h>
 #include "phy.h"
+#include "../util/clock.h"
 
 //API CI-field definitions for EN13757-3
 //#ifndef Default_settings
@@ -129,7 +130,6 @@ typedef enum {
 #define VIF_SET_PRIMARY_ADDRESS 0x7A
 #define VIF_SET_SECONDARY_ADDRESS 0x79
 
-
 #define VOLUME_IN_LITER 0x13
 
 #define TIME_IN_SECONDS 0x20  //  on time
@@ -153,9 +153,10 @@ typedef enum {
 
 // VIFE definitions for VIF= FD(primary VIF)-> true value is given in the first VIFE
 
-#define ACCESS_NUMBER 0X08
+//#define ACCESS_NUMBER 0X08
 #define HEAT_METER 0X04  // device type => heat meter/cost allocator
 #define MANUFACTURER 0X0A
+#define VERSION_NUMBER 0x01
 #define HARDWARE_VERSION 0X0D
 #define SOFTWARE_VERSION 0X0E  // firmware/meterology version
 #define PASSWORD 0X16
@@ -201,8 +202,16 @@ typedef enum {
  * These are not included in the standard but added by the manufacturer
  *
  */
-//custom VIFE definitions following VIF = 0x7F/0xFF
+/*!-- Manufacturer - ISTRON
+ * First 3 letters - IST
+ * 	 IEC 870 Man. ID =
+ * 	 [ASCII(I) - 64] • 32 • 32
+ * + [ASCII(S) - 64] • 32
+ * + [ASCII(T) - 64]
+ */
+#define MANUFACTURER_ID		0x2674
 
+//custom VIFE definitions following VIF = 0x7F/0xFF
 #define START_END_TIME
 
 /* Response of the meter */
@@ -393,6 +402,19 @@ typedef struct {
 
 } EN_13757_3_master_message;
 
+typedef struct {
+	uint32_t m_reg; //measured energy used per month
+	timeStruct timeStamp;  //time captured
+} month_reg; // 11 bytes
+
+
+/*!--month registers*/
+extern month_reg _month_reg[12]; // captured energy values at the end of each month
+
+/*!--Energy in milli Joules - actual result scaled by a factor of 1000 */
+extern volatile uint64_t c_enReg; //energy register
+
+
 /*!\struct EN_13757_3_slave_message
  *
  * \brief  Framing for the Application layer packet sent from the slave to the master based on the EN13757_3 Dedicated application layer standard.
@@ -430,5 +452,5 @@ void prc_snd_ud();
 void rq_class_2();
 void rq_class_2_px();
 //void rq_class_2_sa();
-void set_br(uint8_t BAUD);
+void switch_br(uint8_t BAUD);
 #endif /* COMM_APP_H_ */

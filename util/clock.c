@@ -20,9 +20,11 @@ volatile timeStruct currentTime; /*! Global variable holding the current hardwar
  *  This variable is updated every second */
 volatile uint8_t _monChanged = 0;
 volatile uint8_t _yrChanged = 0;
+volatile uint8_t _dayChanged = 0;
 
 volatile uint8_t _sampling_timeUp = 0;
 volatile uint8_t _count_samples = 0;
+volatile uint8_t _page_timeUp = 5; // set at 5 seconds
 /*!
  * @brief Function Name: rtc_config
  *
@@ -55,7 +57,7 @@ void rtc_config(void) {
  *              \li 0: Success
  *              \li Error codes TBD
  */
-int8_t rtc_set_time(timeStruct* pNewTime) {
+uint8_t rtc_set_time(timeStruct* pNewTime) {
 	RTCYEAR = pNewTime->year;
 	RTCMON = pNewTime->month;
 	RTCDAY = pNewTime->day;
@@ -65,8 +67,20 @@ int8_t rtc_set_time(timeStruct* pNewTime) {
 	RTCSEC = pNewTime->second;
 	return 0;
 }
-uint8_t rtc_binary_to_bcd(uint64_t copy, uint8_t* res) {
-
+/*!
+ * @brief Function Name: rtc_set_time
+ *
+ * The function updates the current time of the RTC hardware to a new time.
+ *
+ * @param newTime : New time to be written to RTC hardware
+ *
+ * @return : A copy of the lastest read time
+ *
+ * @note : There could be up to a 1 second discrepancy between the actual and the read values.
+ *
+ */
+timeStruct rtc_get_time(void) {
+	return currentTime;
 }
 
 /*!
@@ -104,23 +118,25 @@ void __attribute__ ((interrupt(RTC_VECTOR))) RTCC_ISR (void)
 			_sampling_timeUp = 1;
 			_count_samples = 0;
 		}
+		_page_timeUp--;
 		break;
 	case 0x06: /*RTC interval timer; Interrupt Flag: RTCTEVIFG */
-		if (RTCMIN == 0) { /*RTCMINC*/
-			/*todo -> hour changed*/
-			if (RTCHOUR == 0) {
-				/*todo -> day changed*/
-				if (RTCDAY == 1) {
-					/*todo -> month changed*/
-					_monChanged = 1;
-				}
-				if (RTCYEAR == prevYear + 1) {
-					prevYear = RTCYEAR;
-					/*todo -> year changed*/
-					_yrChanged = 1;
-				}
-			}
+//		if (RTCMIN == 0) { /*RTCMINC*/
+//			/*todo -> hour changed*/
+//			if (RTCHOUR == 0) {
+		_dayChanged = 1;
+		/*todo -> day changed*/
+		if (RTCDAY == 1) {
+			/*todo -> month changed*/
+			_monChanged = 1;
 		}
+		if (RTCYEAR == prevYear + 1) {
+			prevYear = RTCYEAR;
+			/*todo -> year changed*/
+			_yrChanged = 1;
+		}
+//			}
+//		}
 		__bic_SR_register_on_exit(LPM3_bits);
 		break;
 	case 0x08:

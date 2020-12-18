@@ -23,6 +23,7 @@ void (*cb_t)(void);
 /*!-- GLOBALS */
 uint8_t rx_index = 0; //0-indexed
 volatile lnk_frame *r_frame;
+volatile lnk_frame *rsp_frame;
 volatile uint8_t ud_buff[MBUS_FRAME_MAX_USER_DATA_SIZE];
 volatile uint8_t tx_buff[MBUS_FRAME_MAX_USER_DATA_SIZE];
 uint8_t ud_buff_index = 1;
@@ -33,52 +34,20 @@ volatile uint16_t current_baud = THREE_HUNDERED; // Track working baud
 volatile uint8_t r_delay = 0;
 volatile uint16_t auto_br_delay = 0;
 
-/*!-- Default primary address of all slaves at manufature.
- *  Note: This value can be overwritten(changed) with an application level
- *   master command. */
-const uint8_t UNCONFIGURED_PRIMARY_ADDRESS = 0;
-/*!
- * @brief Function Name: ux_config
+/*Slave addresses*/
+volatile uint8_t PRIMARY_ADDRESS = 0x00;
+volatile uint32_t SERIAL_NUMBER = 0x00000000;
+
+/*@note :
+ * 	Product date format :
+ * 	December 18,2020
+ *  Format : 18/12/20
  *
- * Initializes the UART module registers with the appropriate configuration parameters
- *
- * @param none
- *
- * @return none
  */
-void ux_config() {
 
-	/* Initialize GPIO port */
-	MBUS_TX_PxSEL0 &= ~MBUS_TX_BIT; /* Reset bit first....  */
-	MBUS_TX_PxSEL0 |= MBUS_TX_PxSEL0_VAL; /* ....Then set the desired value */
-	MBUS_TX_PxSEL1 &= ~MBUS_TX_BIT; /* Reset bit first....  */
-	MBUS_TX_PxSEL1 |= MBUS_TX_PxSEL1_VAL; /* ....Then set the desired value */
-
-	MBUS_RX_PxSEL0 &= ~MBUS_RX_BIT; /* Reset bit first....  */
-	MBUS_RX_PxSEL0 |= MBUS_RX_PxSEL0_VAL; /* ....Then set the desired value */
-	MBUS_RX_PxSEL1 &= ~MBUS_RX_BIT; /* Reset bit first....  */
-	MBUS_RX_PxSEL1 |= MBUS_RX_PxSEL1_VAL; /* ....Then set the desired value */
-
-	/* Configure MSP uart module */
-
-	MBUS_UART_UCxCTL1 |= UCSWRST; /* disable and reset to allow configuration */
-	MBUS_UART_UCxCTL0 |= UCPEN; /* enable parity */
-	MBUS_UART_UCxCTL0 &= ~UCMSB; /* LSB first  default */
-	MBUS_UART_UCxCTL0 &= ~UC7BIT; /* 8 -bit    default */
-	MBUS_UART_UCxCTL0 &= ~UCSPB; /* one stop bit default */
-	MBUS_UART_UCxCTL0 |= UCMODE_0; /* UART Mode default */
-	MBUS_UART_UCxCTL0 &= ~UCSYNC; /* Asynchronous mode default */
-
-	/*Set a default buadrate of 300*/
-	MBUS_UART_UCxCTL1 |= UCSSEL__ACLK; /* ACLK is the clock source */
-	MBUS_UART_UCxBRW = 0x6D;
-	MBUS_UART_UCxMCTLW = 0x44;
-	//UCA0STATW |= UCLISTEN;
-
-	MBUS_UART_UCxCTL1 &= ~UCSWRST; /* enable module to apply configuration */
-	MBUS_UART_UCxIE |= UCRXIE; /* Enable RX interrupt */
-	MBUS_UART_UCxIFG &= ~(UCTXIFG + UCRXIFG); /* Clear interrupts if set */
-}
+#pragma PERSISTENT(devInfo)
+deviceInfo devInfo = { .primaryAddress = 0, .serialNumber = 0x00000000,
+		.productNumber = 0x00000000, .productDate = 0x120C14 };
 
 /*!
  * @brief Function Name: set_baudRate
@@ -129,14 +98,56 @@ void set_baudRate(uint16_t baudRate) {
 		MBUS_UART_UCxMCTLW = 0xB601;
 		break;
 
-	default: //9600 is the default baudrate
-		MBUS_UART_UCxCTL1 |= UCSSEL__SMCLK; /* SMCLK is the clock source */
-		MBUS_UART_UCxBRW = 833;
-		MBUS_UART_UCxMCTLW = 0x4910;
+	default: //300 is the default baudrate
+		MBUS_UART_UCxCTL1 |= UCSSEL__ACLK; /* ACLK is the clock source */
+		MBUS_UART_UCxBRW = 0x6D;
+		MBUS_UART_UCxMCTLW = 0x44;
 		break;
 	}
 	current_baud = baudRate; /* Set baud */
 }
+
+/*!
+ * @brief Function Name: ux_config
+ *
+ * Initializes the UART module registers with the appropriate configuration parameters
+ *
+ * @param The operating baudrate.
+ *
+ * @return none
+ */
+void ux_config(uint16_t baudRate) {
+
+	/* Initialize GPIO port */
+	MBUS_TX_PxSEL0 &= ~MBUS_TX_BIT; /* Reset bit first....  */
+	MBUS_TX_PxSEL0 |= MBUS_TX_PxSEL0_VAL; /* ....Then set the desired value */
+	MBUS_TX_PxSEL1 &= ~MBUS_TX_BIT; /* Reset bit first....  */
+	MBUS_TX_PxSEL1 |= MBUS_TX_PxSEL1_VAL; /* ....Then set the desired value */
+
+	MBUS_RX_PxSEL0 &= ~MBUS_RX_BIT; /* Reset bit first....  */
+	MBUS_RX_PxSEL0 |= MBUS_RX_PxSEL0_VAL; /* ....Then set the desired value */
+	MBUS_RX_PxSEL1 &= ~MBUS_RX_BIT; /* Reset bit first....  */
+	MBUS_RX_PxSEL1 |= MBUS_RX_PxSEL1_VAL; /* ....Then set the desired value */
+
+	/* Configure MSP uart module */
+
+	MBUS_UART_UCxCTL1 |= UCSWRST; /* disable and reset to allow configuration */
+	MBUS_UART_UCxCTL0 |= UCPEN; /* enable parity */
+	MBUS_UART_UCxCTL0 &= ~UCMSB; /* LSB first  default */
+	MBUS_UART_UCxCTL0 &= ~UC7BIT; /* 8 -bit    default */
+	MBUS_UART_UCxCTL0 &= ~UCSPB; /* one stop bit default */
+	MBUS_UART_UCxCTL0 |= UCMODE_0; /* UART Mode default */
+	MBUS_UART_UCxCTL0 &= ~UCSYNC; /* Asynchronous mode default */
+
+	/*Set a default buadrate of 300*/
+	set_baudRate(baudRate);
+	//UCA0STATW |= UCLISTEN;
+
+	MBUS_UART_UCxCTL1 &= ~UCSWRST; /* enable module to apply configuration */
+	MBUS_UART_UCxIE |= UCRXIE; /* Enable RX interrupt */
+	MBUS_UART_UCxIFG &= ~(UCTXIFG + UCRXIFG); /* Clear interrupts if set */
+}
+
 /*!
  * @brief Function Name: x_reset
  *
@@ -278,7 +289,7 @@ void inline rx_lnk_frame(uint8_t data) {
 	}
 	if (c_status == waiting_for_response) {
 		/*!---validate frame*/
-		if (error == t_validator()) {
+		if (error == t_validator(r_frame)) {
 			x_reset();
 			return;
 		}
@@ -307,25 +318,36 @@ void x_lnk_res(void) {
 	return;
 }
 
-cs_result inline t_validator() {
+uint8_t inline getCheksum(volatile lnk_frame *frame) {
 	uint8_t cs = 0;
-	switch (r_frame->c_field) {
+	cs = (frame->c_field + frame->a_field + frame->ci_field);
+	int y = frame->l_fieldH - 3;
+	for (; y >= 0; y--) {
+		cs += *frame->user_data;
+		frame->user_data++;
+	}
+	cs &= 0x0f;
+	return cs;
+}
+cs_result inline t_validator(lnk_frame *frame) {
+	uint8_t cs = 0;
+	switch (frame->type) {
 	case short_frame: {
-		cs = (r_frame->c_field + r_frame->a_field) & 0x0f;
+		cs = (frame->c_field + frame->a_field) & 0x0f;
 		break;
 	}
 	case control_frame: {
 		/*!-- TODO
 		 * Handle control frame -> ACK or ignore */
-		cs = (r_frame->c_field + r_frame->a_field + r_frame->ci_field) & 0x0f;
+		cs = (frame->c_field + frame->a_field + frame->ci_field) & 0x0f;
 		break;
 	}
 	case long_frame: {
-		cs = (r_frame->c_field + r_frame->a_field + r_frame->ci_field);
-		int y = r_frame->l_fieldH - 3;
+		cs = (frame->c_field + frame->a_field + frame->ci_field);
+		int y = frame->l_fieldH - 3;
 		for (; y >= 0; y--) {
-			cs += *r_frame->user_data;
-			r_frame->user_data++;
+			cs += *frame->user_data;
+			frame->user_data++;
 		}
 		cs &= 0x0f;
 		break;
@@ -333,7 +355,7 @@ cs_result inline t_validator() {
 	default:
 		break;
 	}
-	return cs == r_frame->checksum ? valid : error;
+	return cs == frame->checksum ? valid : error;
 }
 
 #pragma vector = USCI_A1_VECTOR

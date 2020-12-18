@@ -22,7 +22,9 @@ typedef struct {
 	uint8_t month;
 	uint16_t year;
 } timeStruct;
+
 /*monitor flags*/
+extern volatile uint8_t _dayChanged;
 extern volatile uint8_t _monChanged;
 extern volatile uint8_t _yrChanged;
 
@@ -31,8 +33,10 @@ extern const timeStruct resetTime;
 
 extern volatile uint8_t _sampling_timeUp;
 
+extern volatile uint8_t _page_timeUp;
+
 void rtc_config(void);
-int8_t rtc_set_time(timeStruct* pNewTime);
-uint8_t rtc_binary_to_bcd(uint64_t copy, uint8_t* res);
+uint8_t rtc_set_time(timeStruct* pNewTime);
+timeStruct rtc_get_time(void);
 
 #endif /* CLOCK_H_ */
